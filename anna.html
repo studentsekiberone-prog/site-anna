@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Neon Password Strength | Проверка сложности пароля от эчпочмака</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #e2cc0e, #00ffbf);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        /* стекломорфизм с blur-эффектом для фона (декор) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
+        /* главная карточка */
+        .glass-card {
+            max-width: 550px;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 2rem 1.8rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(34, 197, 94, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: 1.5rem 1.2rem;
+                border-radius: 1.5rem;
+            }
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.3px;
+        }
+
+        .sub {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-bottom: 1.8rem;
+            border-left: 3px solid #22c55e;
+            padding-left: 0.75rem;
+        }
+
+        /* поле ввода + глаз */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1.2rem;
+            font-size: 1rem;
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-radius: 1.2rem;
+            color: #f1f5f9;
+            transition: all 0.25s ease;
+            outline: none;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .password-input:focus {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+        }
+
+        .toggle-pwd {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            color: #94a3b8;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.3rem;
+        }
+
+        .toggle-pwd:hover {
+            color: #22c55e;
+        }
+
+        /* индикатор силы */
+        .strength-section {
+            margin-bottom: 1.8rem;
+        }
+
+        .strength-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.6rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .strength-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #cbd5e1;
+        }
+
+        .strength-text {
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: color 0.2s ease, text-shadow 0.2s;
+        }
+
+        /* прогресс-бар */
+        .progress-bar-bg {
+            background-color: #0f172a;
+            border-radius: 40px;
+            height: 10px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            border-radius: 40px;
+            transition: width 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1), background-color 0.2s;
+            background-color: #ef4444;
+        }
+
+        /* чек-лист критериев */
+        .criteria-list {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 1.2rem;
+            padding: 1rem 1.2rem;
+            margin: 1.8rem 0 1.8rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid #334155;
+        }
+
+        .criteria-title {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #cbd5e6;
+            margin-bottom: 1rem;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .criteria-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .criterion {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            transition: all 0.2s;
+            padding: 0.2rem 0;
+        }
+
+        .criterion-icon {
+            font-size: 1.2rem;
+            width: 1.6rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .criterion-text {
+            flex: 1;
+            transition: color 0.2s, text-decoration 0.2s;
+        }
+
+        /* выполненный критерий */
+        .criterion.valid .criterion-icon {
+            color: #22c55e;
+            filter: drop-shadow(0 0 2px #22c55e);
+        }
+
+        .criterion.valid .criterion-text {
+            color: #86efac;
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+            text-decoration-color: #22c55e;
+        }
+
+        /* кнопка генерации */
+        .generate-btn {
+            width: 100%;
+            background: linear-gradient(95deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            padding: 0.9rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(4px);
+            margin-top: 0.4rem;
+        }
+
+        .generate-btn:hover {
+            border-color: #22c55e;
+            background: #1e293b;
+            color: #facc15;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.2);
+        }
+
+        .generate-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* анимация для плавного обновления */
+        @keyframes subtlePulse {
+            0% { opacity: 0.7; transform: scale(0.98);}
+            100% { opacity: 1; transform: scale(1);}
+        }
+
+        .animate-update {
+            animation: subtlePulse 0.2s ease-out;
+        }
+
+        footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+<div class="glass-card" id="app">
+    <h1>✦ PASSWORD METER</h1>
+    <div class="sub">надежность шифрования — в реальном времени</div>
+
+    <!-- поле ввода с глазом -->
+    <div class="input-wrapper">
+        <input type="password" id="passwordInput" class="password-input" placeholder="Введите пароль..." autocomplete="off">
+        <button class="toggle-pwd" id="toggleEye" aria-label="Показать/скрыть пароль">
+            👁️
+        </button>
+    </div>
+
+    <!-- индикатор силы -->
+    <div class="strength-section">
+        <div class="strength-header">
+            <span class="strength-label">Сложность пароля</span>
+            <span class="strength-text" id="strengthText">—</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-fill" id="strengthBar"></div>
+        </div>
+    </div>
+
+    <!-- чек-лист критериев -->
+    <div class="criteria-list">
+        <div class="criteria-title">
+            <span>🔒 Критерии безопасности</span>
+        </div>
+        <div class="criteria-grid" id="criteriaList">
+            <!-- Динамически через js заполним, но для наглядности оставим структуру, лучше создадим js, но можно и html -->
+        </div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn">
+        ⚡ Сгенерировать надежный пароль
+    </button>
+    <footer>минимум 8 символов • цифры • спецсимволы</footer>
+</div>
+
+<script>
+    // --- Критерии (ID и описание) ---
+    const CRITERIA = [
+        { id: 'minLen', label: 'Минимум 8 символов', test: (pwd) => pwd.length >= 8 },
+        { id: 'uppercase', label: 'Заглавные буквы (A-Z)', test: (pwd) => /[A-Z]/.test(pwd) },
+        { id: 'lowercase', label: 'Строчные буквы (a-z)', test: (pwd) => /[a-z]/.test(pwd) },
+        { id: 'digits', label: 'Цифры (0-9)', test: (pwd) => /[0-9]/.test(pwd) },
+        { id: 'special', label: 'Специальные символы (!@#$%^&*)', test: (pwd) => /[!@#$%^&*]/.test(pwd) }
+    ];
+
+    // DOM элементы
+    const passwordInput = document.getElementById('passwordInput');
+    const toggleEye = document.getElementById('toggleEye');
+    const strengthTextEl = document.getElementById('strengthText');
+    const strengthBar = document.getElementById('strengthBar');
+    const criteriaContainer = document.getElementById('criteriaList');
+    const generateBtn = document.getElementById('generateBtn');
+
+    // Состояние видимости
+    let isPasswordVisible = false;
+
+    // Функция рендера чек-листа (создаем элементы один раз, потом обновляем классы)
+    let criteriaElements = [];
+
+    function buildCriteriaList() {
+        criteriaContainer.innerHTML = '';
+        criteriaElements = [];
+        CRITERIA.forEach((criterion, idx) => {
+            const div = document.createElement('div');
+            div.className = 'criterion';
+            div.dataset.id = criterion.id;
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'criterion-icon';
+            iconSpan.textContent = '◌'; // пустой кружок
+            const textSpan = document.createElement('span');
+            textSpan.className = 'criterion-text';
+            textSpan.textContent = criterion.label;
+            
+            div.appendChild(iconSpan);
+            div.appendChild(textSpan);
+            criteriaContainer.appendChild(div);
+            criteriaElements.push({
+                container: div,
+                icon: iconSpan,
+                text: textSpan,
+                testFn: criterion.test
+            });
+        });
+    }
+
+    // Обновление состояния критериев + возврат количества выполненных
+    function updateCriteriaStatus(password) {
+        let fulfilledCount = 0;
+        CRITERIA.forEach((criterion, idx) => {
+            const isValid = criterion.test(password);
+            const element = criteriaElements[idx];
+            if (isValid) {
+                element.container.classList.add('valid');
+                element.icon.textContent = '✔️';
+                fulfilledCount++;
+            } else {
+                element.container.classList.remove('valid');
+                element.icon.textContent = '◌';
+            }
+        });
+        return fulfilledCount;
+    }
+
+    // Определение сложности на основе выполненных критериев
+    function getStrengthLevel(fulfilledCount) {
+        if (fulfilledCount < 3) return { text: 'СЛАБЫЙ', color: '#ef4444', widthPercent: (fulfilledCount / 5) * 100, glow: '#ef4444' };
+        if (fulfilledCount === 3 || fulfilledCount === 4) return { text: 'СРЕДНИЙ', color: '#eab308', widthPercent: (fulfilledCount / 5) * 100, glow: '#eab308' };
+        return { text: 'СИЛЬНЫЙ', color: '#22c55e', widthPercent: 100, glow: '#22c55e' };
+    }
+
+    // Основная функция обновления UI: анимация + прогресс + текст
+    let animationTimer = null;
+    function updateStrengthMeter(password) {
+        // подсчет выполненных критериев
+        const fulfilled = updateCriteriaStatus(password);
+        const level = getStrengthLevel(fulfilled);
+        
+        // обновляем текстовую метку
+        strengthTextEl.textContent = level.text;
+        strengthTextEl.style.color = level.color;
+        strengthTextEl.style.textShadow = `0 0 3px ${level.color}80`;
+        
+        // обновляем прогресс-бар
+        strengthBar.style.width = `${level.widthPercent}%`;
+        strengthBar.style.backgroundColor = level.color;
+        
+        // добавить анимацию к карточке прогресса (плавное обновление)
+        const barBg = document.querySelector('.progress-bar-bg');
+        if (barBg) {
+            barBg.classList.add('animate-update');
+            setTimeout(() => barBg.classList.remove('animate-update'), 250);
+        }
+        
+        // также добавим легкую анимацию для индикатора текста
+        strengthTextEl.classList.add('animate-update');
+        setTimeout(() => strengthTextEl.classList.remove('animate-update'), 200);
+        
+        // дополнительный эффект на поле ввода при сильном пароле (необязательно, но стильно)
+        if (level.text === 'СИЛЬНЫЙ') {
+            passwordInput.style.borderColor = '#22c55e';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(34,197,94,0.25)';
+        } else if (level.text === 'СРЕДНИЙ') {
+            passwordInput.style.borderColor = '#eab308';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(234,179,8,0.2)';
+        } else {
+            passwordInput.style.borderColor = '#ef4444';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.15)';
+        }
+    }
+    
+    // Обработчик ввода с debounce? но можно напрямую с анимацией
+    let debounceTimer;
+    function onPasswordInput() {
+        const pwd = passwordInput.value;
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            updateStrengthMeter(pwd);
+        }, 20); // микро-задержка для плавности, но и так ок
+    }
+    
+    // Генерация надежного пароля (12 символов, включает все типы)
+    function generateSecurePassword() {
+        const lowerCase = 'abcdefghijklmnopqrstuvwxyz';
+        const upperCase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const digits = '0123456789';
+        const special = '!@#$%^&*';
+        
+        // гарантированно минимум по одному из каждого типа
+        let passwordArray = [];
+        passwordArray.push(getRandomChar(lowerCase));
+        passwordArray.push(getRandomChar(upperCase));
+        passwordArray.push(getRandomChar(digits));
+        passwordArray.push(getRandomChar(special));
+        
+        // остальные 8 символов из всех категорий
+        const allChars = lowerCase + upperCase + digits + special;
+        for (let i = 0; i < 8; i++) {
+            passwordArray.push(getRandomChar(allChars));
+        }
+        
+        // перемешиваем массив для случайного порядка
+        for (let i = passwordArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+        }
+        
+        const newPassword = passwordArray.join('');
+        return newPassword;
+    }
+    
+    function getRandomChar(charSet) {
+        const randomIndex = Math.floor(Math.random() * charSet.length);
+        return charSet[randomIndex];
+    }
+    
+    // Вставить сгенерированный пароль и обновить всё
+    function handleGenerate() {
+        const strongPwd = generateSecurePassword();
+        passwordInput.value = strongPwd;
+        // сброс видимости: если пароль был скрыт — оставляем как есть (глаз не меняет тип поля)
+        // но важно: если пароль показан (глаз открыт), то показываем открыто, иначе скрыто.
+        // поддерживаем состояние isPasswordVisible
+        if (isPasswordVisible) {
+            passwordInput.type = 'text';
+        } else {
+            passwordInput.type = 'password';
+        }
+        // обновляем метрики
+        updateStrengthMeter(strongPwd);
+        
+        // дополнительная анимация карточки
+        const card = document.querySelector('.glass-card');
+        card.style.transform = 'scale(1.01)';
+        setTimeout(() => { card.style.transform = ''; }, 150);
+        
+        // небольшой фидбек: фокус на поле
+        passwordInput.focus();
+    }
+    
+    // Переключение видимости пароля
+    function togglePasswordVisibility() {
+        isPasswordVisible = !isPasswordVisible;
+        const currentPwd = passwordInput.value;
+        if (isPasswordVisible) {
+            passwordInput.type = 'text';
+            toggleEye.textContent = '🙈';
+        } else {
+            passwordInput.type = 'password';
+            toggleEye.textContent = '👁️';
+        }
+        // сохраняем позицию курсора
+        const len = currentPwd.length;
+        passwordInput.setSelectionRange(len, len);
+    }
+    
+    // Инициализация чек-листа и начального состояния
+    function init() {
+        buildCriteriaList();
+        // начальный пароль пустой — все критерии не выполнены
+        updateStrengthMeter('');
+        
+        // слушатели событий
+        passwordInput.addEventListener('input', onPasswordInput);
+        toggleEye.addEventListener('click', togglePasswordVisibility);
+        generateBtn.addEventListener('click', handleGenerate);
+        
+        // дополнительно: слушаем изменение для того чтобы при вставке мышкой тоже триггерить
+        passwordInput.addEventListener('change', onPasswordInput);
+        
+        // стилизуем прогресс-бар при загрузке
+        strengthBar.style.width = '0%';
+        strengthBar.style.backgroundColor = '#ef4444';
+        strengthTextEl.textContent = '—';
+        strengthTextEl.style.color = '#cbd5e1';
+        passwordInput.style.borderColor = '#334155';
+        
+        // Адаптивность для мобильных устройств — добавим мета-вьюпорт уже есть в head, но оставим корректное масштабирование
+        // Убедимся, что на мобильных полях удобно
+        if (window.innerWidth <= 480) {
+            document.querySelector('.password-input').style.fontSize = '16px'; // предотвращает zoom в iOS
+        }
+        
+        // небольшая анимация появления
+        const glass = document.querySelector('.glass-card');
+        glass.style.opacity = '0';
+        glass.style.transform = 'translateY(12px)';
+        setTimeout(() => {
+            glass.style.transition = 'all 0.4s ease-out';
+            glass.style.opacity = '1';
+            glass.style.transform = 'translateY(0)';
+        }, 20);
+    }
+    
+    // Плавное обновление индикатора + доп. защита от повторных анимаций: уже реализовано через css класс animate-update
+    // для улучшения динамического списка - добавим наблюдение за resize для мобилок (необязательно)
+    window.addEventListener('resize', () => {
+        // ничего критичного, просто поддержка
+    });
+    
+    // Старт приложения
+    init();
+    
+    // дополнительно: если пользователь копирует или генерирует, обработать глазик корректно, 
+    // а также сделать чтобы при ручной смене пароля сохранялось состояние показа/скрытия
+    // уже выше все учтено
+    
+    // Эффект "неонового дыхания" для сильного пароля - небольшой фикс, чтобы подпись тоже менялась 
+    // и для критериев добавим плавную анимацию при валидации
+    const style = document.createElement('style');
+    style.textContent = `
+        .criterion {
+            transition: all 0.2s ease;
+        }
+        .criterion .criterion-icon {
+            transition: transform 0.2s, color 0.2s;
+        }
+        .criterion.valid .criterion-icon {
+            transform: scale(1.05);
+        }
+        .progress-fill {
+            transition: width 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1), background-color 0.2s;
+        }
+        .strength-text {
+            transition: color 0.2s, text-shadow 0.2s, transform 0.1s;
+        }
+        .generate-btn:active {
+            transform: scale(0.98);
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:focus {
+            transition: background-color 600000s 0s, color 600000s 0s;
+        }
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: 1.4rem 1rem;
+            }
+            .criteria-list {
+                padding: 0.8rem 1rem;
+            }
+            .criterion-text {
+                font-size: 0.8rem;
+            }
+            .generate-btn {
+                padding: 0.7rem 1rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Обновляем текст критерия спецсимволов для полной ясности (чтобы в чек-листе отображалось верно)
+    // если пользователь захочет переопределить что-то, но всё уже корректно
+    // также при изменении пароля программно (генерация) — обновление происходит
+    
+    // Добавим небольшой багфикс: если во время генерации пользователь уже показывал пароль, то глаз меняет иконку правильно
+    // исправим начальную иконку
+    const originalEyeHandler = toggleEye;
+    // убедимся что после генерации иконка глаза соответствует состоянию
+    const originalGenerate = handleGenerate;
+    window.handleGenerate = handleGenerate; // безопасно
+    
+    // финальный штрих: анимация для прогресс-бара при изменении ширины
+    // улучшим точность: при выполнении всех критериев прогресс бар 100%
+    // также обновляем при первом рендере критерии: пустой пароль - все невалидны
+    // в updateCriteriaStatus уже отработает
+    // сделаем так, чтобы при пустом поле текст силы был "СЛАБЫЙ", но с шириной 0% корректно
+    function finalTweak() {
+        // если пароль пуст, прогресс 0%
+        if (passwordInput.value.length === 0) {
+            strengthBar.style.width = '0%';
+            strengthTextEl.textContent = 'СЛАБЫЙ';
+            strengthTextEl.style.color = '#ef4444';
+        }
+    }
+    
+    // наблюдаем за обновлением, вызываем финальный твик после каждого обновления
+    const origUpdate = updateStrengthMeter;
+    window.updateStrengthMeter = function(pwd) {
+        origUpdate(pwd);
+        if (pwd.length === 0) {
+            strengthBar.style.width = '0%';
+            strengthTextEl.textContent = 'СЛАБЫЙ';
+        }
+    };
+    updateStrengthMeter = window.updateStrengthMeter;
+    // перепривязываем
+    window.updateStrengthMeter = updateStrengthMeter;
+    // но чтобы избежать конфликтов просто переопределим метод
+    updateStrengthMeter = function(password) {
+        const fulfilled = updateCriteriaStatus(password);
+        const level = getStrengthLevel(fulfilled);
+        strengthTextEl.textContent = level.text;
+        strengthTextEl.style.color = level.color;
+        strengthTextEl.style.textShadow = `0 0 3px ${level.color}80`;
+        let widthVal = level.widthPercent;
+        if (password.length === 0) widthVal = 0;
+        strengthBar.style.width = `${widthVal}%`;
+        strengthBar.style.backgroundColor = level.color;
+        const barBg = document.querySelector('.progress-bar-bg');
+        if (barBg) {
+            barBg.classList.add('animate-update');
+            setTimeout(() => barBg.classList.remove('animate-update'), 250);
+        }
+        strengthTextEl.classList.add('animate-update');
+        setTimeout(() => strengthTextEl.classList.remove('animate-update'), 200);
+        if (level.text === 'СИЛЬНЫЙ') {
+            passwordInput.style.borderColor = '#22c55e';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(34,197,94,0.25)';
+        } else if (level.text === 'СРЕДНИЙ') {
+            passwordInput.style.borderColor = '#eab308';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(234,179,8,0.2)';
+        } else {
+            passwordInput.style.borderColor = level.text === 'СЛАБЫЙ' ? '#ef4444' : '#ef4444';
+            passwordInput.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.15)';
+        }
+    };
+    
+    // перепривязываем обработчики
+    passwordInput.removeEventListener('input', onPasswordInput);
+    const newOnInput = () => {
+        const pwd = passwordInput.value;
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            updateStrengthMeter(pwd);
+        }, 15);
+    };
+    passwordInput.addEventListener('input', newOnInput);
+    window.updateStrengthMeter(passwordInput.value);
+    // также обновляем генерацию
+    const newGenerate = () => {
+        const strongPwd = generateSecurePassword();
+        passwordInput.value = strongPwd;
+        if (isPasswordVisible) passwordInput.type = 'text';
+        else passwordInput.type = 'password';
+        updateStrengthMeter(strongPwd);
+        const card = document.querySelector('.glass-card');
+        card.style.transform = 'scale(1.01)';
+        setTimeout(() => { card.style.transform = ''; }, 150);
+        passwordInput.focus();
+    };
+    generateBtn.onclick = newGenerate;
+    toggleEye.onclick = () => {
+        isPasswordVisible = !isPasswordVisible;
+        if (isPasswordVisible) {
+            passwordInput.type = 'text';
+            toggleEye.textContent = '🙈';
+        } else {
+            passwordInput.type = 'password';
+            toggleEye.textContent = '👁️';
+        }
+        const len = passwordInput.value.length;
+        passwordInput.setSelectionRange(len, len);
+    };
+    updateStrengthMeter(passwordInput.value);
+</script>
+</body>
+</html>
